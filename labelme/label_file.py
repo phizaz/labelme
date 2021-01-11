@@ -12,6 +12,8 @@ from labelme import PY2
 from labelme import QT4
 from labelme import utils
 
+import pydicom
+import numpy as np
 
 PIL.Image.MAX_IMAGE_PIXELS = None
 
@@ -47,13 +49,16 @@ class LabelFile(object):
     @staticmethod
     def load_image_file(filename):
         try:
-            image_pil = PIL.Image.open(filename)
+            # image_pil = PIL.Image.open(filename)
+            array = pydicom.read_file(filename).pixel_array
+            image_pil = PIL.Image.fromarray(array)
+            print('size:', image_pil.size)
         except IOError:
             logger.error("Failed opening image file: {}".format(filename))
             return
 
         # apply orientation to image according to exif
-        image_pil = utils.apply_exif_orientation(image_pil)
+        # image_pil = utils.apply_exif_orientation(image_pil)
 
         with io.BytesIO() as f:
             ext = osp.splitext(filename)[1].lower()
@@ -62,7 +67,10 @@ class LabelFile(object):
             elif ext in [".jpg", ".jpeg"]:
                 format = "JPEG"
             else:
+                # .dcm will be saved as "I"
                 format = "PNG"
+
+            print('format:', format)
             image_pil.save(f, format=format)
             f.seek(0)
             return f.read()
@@ -89,21 +97,16 @@ class LabelFile(object):
                 data = json.load(f)
             version = data.get("version")
             if version is None:
-                logger.warn(
-                    "Loading JSON file ({}) of unknown version".format(
-                        filename
-                    )
-                )
+                logger.warn("Loading JSON file ({}) of unknown version".format(
+                    filename))
             elif version.split(".")[0] != __version__.split(".")[0]:
-                logger.warn(
-                    "This JSON file ({}) may be incompatible with "
-                    "current labelme. version in file: {}, "
-                    "current version: {}".format(
-                        filename, version, __version__
-                    )
-                )
+                logger.warn("This JSON file ({}) may be incompatible with "
+                            "current labelme. version in file: {}, "
+                            "current version: {}".format(
+                                filename, version, __version__))
 
             if data["imageData"] is not None:
+                # as bytes of jpeg or png
                 imageData = base64.b64decode(data["imageData"])
                 if PY2 and QT4:
                     imageData = utils.img_data_to_png_data(imageData)
@@ -126,10 +129,10 @@ class LabelFile(object):
                     flags=s.get("flags", {}),
                     group_id=s.get("group_id"),
                     other_data={
-                        k: v for k, v in s.items() if k not in shape_keys
+                        k: v
+                        for k, v in s.items() if k not in shape_keys
                     },
-                )
-                for s in data["shapes"]
+                ) for s in data["shapes"]
             ]
         except Exception as e:
             raise LabelFileError(e)
@@ -153,14 +156,12 @@ class LabelFile(object):
         if imageHeight is not None and img_arr.shape[0] != imageHeight:
             logger.error(
                 "imageHeight does not match with imageData or imagePath, "
-                "so getting imageHeight from actual image."
-            )
+                "so getting imageHeight from actual image.")
             imageHeight = img_arr.shape[0]
         if imageWidth is not None and img_arr.shape[1] != imageWidth:
             logger.error(
                 "imageWidth does not match with imageData or imagePath, "
-                "so getting imageWidth from actual image."
-            )
+                "so getting imageWidth from actual image.")
             imageWidth = img_arr.shape[1]
         return imageHeight, imageWidth
 
@@ -178,8 +179,7 @@ class LabelFile(object):
         if imageData is not None:
             imageData = base64.b64encode(imageData).decode("utf-8")
             imageHeight, imageWidth = self._check_image_height_and_width(
-                imageData, imageHeight, imageWidth
-            )
+                imageData, imageHeight, imageWidth)
         if otherData is None:
             otherData = {}
         if flags is None:

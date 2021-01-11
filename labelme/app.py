@@ -1395,13 +1395,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.filename, (None, None)
         )
         if brightness is not None:
-            dialog.slider_brightness.setValue(brightness)
+            dialog.slider_window.setValue(brightness)
         if contrast is not None:
-            dialog.slider_contrast.setValue(contrast)
+            dialog.slider_window_size.setValue(contrast)
         dialog.exec_()
 
-        brightness = dialog.slider_brightness.value()
-        contrast = dialog.slider_contrast.value()
+        brightness = dialog.slider_window.value()
+        contrast = dialog.slider_window_size.value()
         self.brightnessContrast_values[self.filename] = (brightness, contrast)
 
     def togglePolygons(self, value):
@@ -1437,7 +1437,8 @@ class MainWindow(QtWidgets.QMainWindow):
             label_file = osp.join(self.output_dir, label_file_without_path)
         if QtCore.QFile.exists(label_file) and LabelFile.is_label_file(
             label_file
-        ):
+        ): 
+            # load json file (with labels)
             try:
                 self.labelFile = LabelFile(label_file)
             except LabelFileError as e:
@@ -1458,6 +1459,7 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             self.otherData = self.labelFile.otherData
         else:
+            # load image file
             self.imageData = LabelFile.load_image_file(filename)
             if self.imageData:
                 self.imagePath = filename
@@ -1526,9 +1528,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.recentFiles[0], (None, None)
             )
         if brightness is not None:
-            dialog.slider_brightness.setValue(brightness)
+            dialog.slider_window.setValue(brightness)
         if contrast is not None:
-            dialog.slider_contrast.setValue(contrast)
+            dialog.slider_window_size.setValue(contrast)
         self.brightnessContrast_values[self.filename] = (brightness, contrast)
         if brightness is not None or contrast is not None:
             dialog.onNewValue(None)
@@ -1671,9 +1673,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.mayContinue():
             return
         path = osp.dirname(str(self.filename)) if self.filename else "."
+        # formats = [
+        #     "*.{}".format(fmt.data().decode())
+        #     for fmt in QtGui.QImageReader.supportedImageFormats()
+        # ]
         formats = [
-            "*.{}".format(fmt.data().decode())
-            for fmt in QtGui.QImageReader.supportedImageFormats()
+            '*.dcm', '*.png'
         ]
         filters = self.tr("Image & Label files (%s)") % " ".join(
             formats + ["*%s" % LabelFile.suffix]
@@ -1986,10 +1991,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.openNextImg(load=load)
 
     def scanAllImages(self, folderPath):
-        extensions = [
-            ".%s" % fmt.data().decode().lower()
-            for fmt in QtGui.QImageReader.supportedImageFormats()
-        ]
+        # extensions = [
+        #     ".%s" % fmt.data().decode().lower()
+        #     for fmt in QtGui.QImageReader.supportedImageFormats()
+        # ]
+        extensions = ['.dcm']
 
         images = []
         for root, dirs, files in os.walk(folderPath):
