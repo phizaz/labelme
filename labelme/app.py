@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import functools
+from labelme.widgets.brightness_contrast_dialog import change_window, change_window_from_bytes
 import math
 import os
 import os.path as osp
@@ -1395,13 +1396,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.filename, (None, None)
         )
         if brightness is not None:
-            dialog.slider_window.setValue(brightness)
+            dialog.slider_window_level.setValue(brightness)
         if contrast is not None:
-            dialog.slider_window_size.setValue(contrast)
+            dialog.slider_window_width.setValue(contrast)
         dialog.exec_()
 
-        brightness = dialog.slider_window.value()
-        contrast = dialog.slider_window_size.value()
+        brightness = dialog.slider_window_level.value()
+        contrast = dialog.slider_window_width.value()
         self.brightnessContrast_values[self.filename] = (brightness, contrast)
 
     def togglePolygons(self, value):
@@ -1464,7 +1465,10 @@ class MainWindow(QtWidgets.QMainWindow):
             if self.imageData:
                 self.imagePath = filename
             self.labelFile = None
-        image = QtGui.QImage.fromData(self.imageData)
+        
+        tmp = self.imageData
+        tmp = change_window_from_bytes(tmp)
+        image = QtGui.QImage.fromData(tmp)
 
         if image.isNull():
             formats = [
@@ -1528,9 +1532,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.recentFiles[0], (None, None)
             )
         if brightness is not None:
-            dialog.slider_window.setValue(brightness)
+            dialog.slider_window_level.setValue(brightness)
         if contrast is not None:
-            dialog.slider_window_size.setValue(contrast)
+            dialog.slider_window_width.setValue(contrast)
         self.brightnessContrast_values[self.filename] = (brightness, contrast)
         if brightness is not None or contrast is not None:
             dialog.onNewValue(None)
